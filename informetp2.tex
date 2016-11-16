@@ -83,7 +83,7 @@
 % Información sobre los autores.
 \author{	Tomas Franco, \textit{Padrón Nro. 91.013}                     \\
             \texttt{ tomasnfranco@gmail.com }                                             \\
-            Pablo Ascarza, \textit{Padrón Nro. xx.xxx}                     \\
+            Pablo Ascarza, \textit{Padrón Nro. }                     \\
             \texttt{pabloqac87@gmail.com }                                              \\
             Diego Meller, \textit{Padrón Nro. 91.299}                     \\
             \texttt{ dmeller@fi.uba.ar }                                              \\[2.5ex]
@@ -165,7 +165,7 @@ sb	Rs, Imm(Rt)
 
 (Store byte). Esta instrucción de tipo I almacena el byte menos significativo de Rs en la posición resultante de sumar el valor del registro Rt y el valor de 16 bits Imm.
 
-Esta instrucción tambien se podria reemplazar con una pseudo-instrucción,
+Esta instrucción también se podría reemplazar con una pseudo-instrucción,
 
 \begin{lstlisting}[title=Pseudoinstrucción Equivalente]
 li	Rtemp, 255
@@ -179,11 +179,11 @@ pero también se eligió modificar el data path dado que era parecido a lo hecho e
 La modificación al \textbf{Data Path} fue:
 
 \begin{enumerate}
-\item Del Registro Pipeline EX/MEM se modifico que el ReadData2 vaya a un Bifurcador en vez de directo al DataMemory.
+\item Del Registro Pipeline EX/MEM se modificó que el ReadData2 vaya a un Bifurcador en vez de directo al DataMemory.
 \item El bifurcador tiene una salida hacia un multiplexor.
-\item La otra salida se envío a un distruidor donde toma solo el byte menos significativo y lo envía a la otra entrada del multiplexor.
+\item La otra salida se envió a un distruidor donde toma solo el byte menos significativo y lo envía a la otra entrada del multiplexor.
 \item Del multiplexor se envía la salida al DataMemory, se elige con una línea de control llamada ``WriteByte'' si esta en 1 se escribe solo el byte, sino todo el word.
-\item A la unidad de control se le agrego la línea de control ``WriteByte'' enviandola al Registro Pipeline ID/EX y un cable entre el mismo hacia el EX/MEM.
+\item A la unidad de control se le agrego la línea de control ``WriteByte'' enviándola al Registro Pipeline ID/EX y un cable entre el mismo hacia el EX/MEM.
 \item Ordenamos los ítems y los cables entre los mismos para que el DP se vea bien.
 \end{enumerate}
  
@@ -196,7 +196,7 @@ En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
 
 \subsubsection{Hazards de Datos}
 
-El único Hazard que se podria dar es el RAW (Read after Write) pero dado que la instrucción se copio del storeword el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
+El único Hazard que se podría dar es el RAW (Read after Write) pero dado que la instrucción se copió del storeword el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
 
 \newpage
 \subsection{bgezal}
@@ -207,15 +207,16 @@ bgezal Rs, Imm
 
 Esta instrucción de tipo I compara el valor del registro Rs con cero, y si es mayor o igual salta a la posición (PC + 4 + Imm*4), almacenando el valor de PC +4 en el registro ra.\\
 
-En este caso es mucho mas simple y queda mas prolijo (al tener que hacer un ``and link'') hacerlo modificiando el Data Path que pensando una pseudo-instrucción equivalente.\\
+En este caso es mucho mas simple y queda mas prolijo (al tener que hacer un ``and link'') hacerlo modificando el Data Path que pensando una pseudo-instrucción equivalente.\\
 
 La modificación al \textbf{Data Path} fue:
 
 \begin{enumerate}
 \item Agregar 2 multiplexores entre EX/MEM y MEM/WB para elegir si guardar un valor en un registro o si guardar el PC+4 en el ra
 \item Para ambos multiplexores se agrego en los Registros Pipeline ID/EX y EX/MEM el item JAL, que fue agregado desde la unidad de control, si se utiliza el bgezal estara en 1 y sino sera 0 siguiendo el camino que usaba antes para las demas instrucciones.
-\item El primer multiplexor toma (en caso de que el JAL este activo) el valor del PC+4 que esta almacenado en el Registro Pipeline EX/MEM en RA, para ello tambien se agrego un Bifurcador entre el Registro Pipeline ID/EX y el ADD que calcula el target del branch para almacenarlo. Ese valor se lo pasa al registro pipeline MEM/WB así guarda en el ra dicha dirección.
+\item El primer multiplexor toma (en caso de que el JAL este activo) el valor del PC+4 que esta almacenado en el Registro Pipeline EX/MEM en RA, para ello también se agrego un Bifurcador entre el Registro Pipeline ID/EX y el ADD que calcula el target del branch para almacenarlo. Ese valor se lo pasa al registro pipeline MEM/WB así guarda en el ra dicha dirección.
 \item El segundo multiplexor toma (en caso del que el JAL este activo) una constante con valor 31 (número de registro para el ra) y lo guarda en el registro pipeline MEM/WB para guardar el PC+4 allí.
+\item Ordenamos los ítems y los cables entre los mismos para que el DP se vea bien.
 \end{enumerate}
 
 En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
@@ -223,7 +224,7 @@ En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
 \begin{enumerate}
 \item Agregar la instrucción propiamente dicha, con código de operación 5 (utilizamos un código cercano al beq que no este utilizado en esta arquitectura).
 \item Agregar a la unidad de control que dicha operación utiliza las mismas líneas de control que el beq agregando línea de control ``JAL'' en 1, también se cambio el ALUOp para que llame a una nueva operación de control de la ALU (ALUOp = 3).
-\item En el control de la ALU cuando eñ ALUOp es 3 (código que creamos nosotros) la ALU hara la operación 7 (slt) dejando la línea de control ``Zero'' en 1 cuando el Rs sea mayor o igual a cero y en 0 cuando Rs sea menor que cero.
+\item En el control de la ALU cuando el ALUOp es 3 (código que creamos nosotros) la ALU hara la operación 7 (slt) dejando la línea de control ``Zero'' en 1 cuando el Rs sea mayor o igual a cero y en 0 cuando Rs sea menor que cero.
 \end{enumerate}
 
 \subsubsection{Hazards de Control}
@@ -232,7 +233,7 @@ El Hazard de control se soluciona con un flush que hace la arquitectura cuando f
 
 \subsubsection{Hazards de Datos}
 
-El único Hazard que se podria dar es el RAW (Read after Write) pero dado que la instrucción se copio del beq el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
+El único Hazard que se podría dar es el RAW (Read after Write) pero dado que la instrucción se copió del beq el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
 
 \newpage
 
