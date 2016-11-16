@@ -1,0 +1,307 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Definición del tipo de documento.                                           %
+% Posibles tipos de papel: a4paper, letterpaper, legalpapper                  %
+% Posibles tamaños de letra: 10pt, 11pt, 12pt                                 %
+% Posibles clases de documentos: article, report, book, slides                %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[a4paper,10pt]{article}
+\usepackage[paperwidth=190mm,paperheight=290mm,left=1.5cm,top=3cm,right=1.5cm,bottom=1cm,head=2.0cm,includefoot]{geometry}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Los paquetes permiten ampliar las capacidades de LaTeX.                     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Paquete para inclusión de gráficos.
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{bigstrut}
+\usepackage{lastpage}
+\usepackage{fancyhdr}
+\usepackage{pdfpages}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{mips}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+  language=[mips]Assembler,       % the language of the code
+  basicstyle=\footnotesize,       % the size of the fonts that are used for the code
+  numbers=left,                   % where to put the line-numbers
+  numberstyle=\tiny\color{gray},  % the style that is used for the line-numbers
+  stepnumber=1,                   % the step between two line-numbers. If it's 1, each line 
+                                  % will be numbered
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  frame=false,                   % adds a frame around the code
+  rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+  tabsize=4,                      % sets default tabsize to 2 spaces
+  captionpos=t,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                 % show the filename of files included with \lstinputlisting;
+                                  % also try caption instead of title
+  keywordstyle=\color{blue},          % keyword style
+  commentstyle=\color{dkgreen},       % comment style
+  stringstyle=\color{mauve},         % string literal style
+  escapeinside={\%*}{*)},            % if you want to add a comment within your code
+%  morekeywords={*,...}               % if you want to add more keywords to the set
+}
+
+%\lstset{basicstyle=\ttfamily,
+%  showstringspaces=false,
+%  commentstyle=\color{red},
+%  keywordstyle=\color{blue}
+%}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+
+
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\footrulewidth}{1pt}
+\usepackage{setspace}
+% Paquete para definir la codificación del conjunto de caracteres usado
+% (latin1 es ISO 8859-1).
+\usepackage[latin1]{inputenc}
+
+% Paquete para definir el idioma usado.
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\pagestyle{fancy}
+\lhead{Trabajo práctico 2}
+\cfoot{Página \thepage~de \pageref{LastPage}}
+\rfoot{$2^{do}$ Cuatrimentre 2016}
+
+% Título principal del documento.
+\title{		\textbf{Trabajo práctico 2: Data path y pipeline}}
+
+% Información sobre los autores.
+\author{	Tomas Franco, \textit{Padrón Nro. 91.013}                     \\
+            \texttt{ tomasnfranco@gmail.com }                                             \\
+            Pablo Ascarza, \textit{Padrón Nro. xx.xxx}                     \\
+            \texttt{pabloqac87@gmail.com }                                              \\
+            Diego Meller, \textit{Padrón Nro. 91.299}                     \\
+            \texttt{ dmeller@fi.uba.ar }                                              \\[2.5ex]
+            \normalsize{Grupo Nro.  \ \ \  - 2do. Cuatrimestre de 2016}                       \\
+            \normalsize{66.20 Organización de Computadoras}                             \\
+            \normalsize{Facultad de Ingeniería, Universidad de Buenos Aires}            \\
+       }
+\date{}
+
+
+
+\begin{document}
+
+% Inserta el título.
+\maketitle
+
+% Quita el número en la primer página.
+\thispagestyle{empty}
+
+% Resumen
+\begin{abstract}
+Utilizamos el programa llamado DrMIPS\cite{DrMIPS} para simular un procesador MIPS32\cite{coad} y poder modificarlo para poder utilizar 3 nuevas instrucciones, una para un procesador uniciclo\cite{coad} y las otras dos en un procesador pipeline\cite{coad}
+\end{abstract}
+
+\newpage
+
+\section{Enunciado}
+
+Se adjunta el enunciado al informe.
+
+\section{Desarrollo}
+
+Se modificaron los archivos \textit{.cpu} y \textit{.set} cuyo formato es JSON\cite{json} correspondientes a cada arquitectura de cada tipo de procesador para las instrucciones pedidas.
+
+\subsection{lbu}
+
+\begin{lstlisting}[title=Instrucción a desarrollar]
+lbu	Rs, Imm(Rt)
+\end{lstlisting}
+
+(Load byte unsigned). Esta instrucción de tipo I carga en Rs el valor del byte almacenado en la posición resultante de sumar el valor del registro Rt y el valor de 16 bits Imm.
+
+En un principio se penso hacer la instrucción como una pseudo-instrucción,
+
+\begin{lstlisting}[title=Pseudoinstrucción Equivalente]
+lw	Rs, Imm(Rt)
+li  Rtemp, 255
+and	Rs, Rs, Rtemp
+\end{lstlisting}
+
+pero se eligió modificar el data path dado que eso daría una mejoría en el tiempo ya que se va a ejecutar una sola instrucción en vez de tres (al ser monociclo cada instrucción tarda lo mismo que es lo que dure la instrucción mas larga).\\
+
+
+La modificación al \textbf{Data Path} fue:
+
+\begin{enumerate}
+\item Agregar luego de la salida del Data Memory un bifurcador que envia el word completo a un multiplexor y a un distribuidor.
+\item El distribuidor toma solo el byte (de los bits menos significativos) y lo envía a un componente que rellena con ceros el byte hasta volver a formar una palabra (``rellenador'' de ceros).
+\item Del ``rellenador'' de ceros va a la otra entrada del multiplexor.
+\item Se agrego una línea de control llamada ``LoadByte'' que le indica al multiplexor cuando tomar solo el byte. Si esta línea esta apagada toma el word completo.
+\item Del multiplexor se envía la salida hacia el multiplexor que ya existía que elegía si tomaba el dato de la Memoria o del resultado de la ALU.
+\item Ordenamos los ítems y los cables entre los mismos para que el DP se vea bien.
+\end{enumerate}
+ 
+En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
+
+\begin{enumerate}
+\item Agregar la instrucción propiamente dicha, con código de operación 36 (utilizamos un código cercano al loadword que no este utilizado en esta arquitectura).
+\item Agregar a la unidad de control que dicha operación utiliza las mismas líneas de control que el loadword agregando línea de control ``LoadByte'' en 1.
+\end{enumerate}
+
+\newpage
+\subsection{sb}
+
+
+\begin{lstlisting}[title=Instrucción a desarrollar]
+sb	Rs, Imm(Rt)
+\end{lstlisting}
+
+(Store byte). Esta instrucción de tipo I almacena el byte menos significativo de Rs en la posición resultante de sumar el valor del registro Rt y el valor de 16 bits Imm.
+
+Esta instrucción tambien se podria reemplazar con una pseudo-instrucción,
+
+\begin{lstlisting}[title=Pseudoinstrucción Equivalente]
+li	Rtemp, 255
+and	Rs, Rs, Rtemp
+sb	Rs, Imm(Rt)
+\end{lstlisting}
+
+pero también se eligió modificar el data path dado que era parecido a lo hecho en el DP uniciclo para el lbu y ademas aporta mas experiencia al manejo del pipeline para la siguiente instrucción.\\
+
+
+La modificación al \textbf{Data Path} fue:
+
+\begin{enumerate}
+\item Del Registro Pipeline EX/MEM se modifico que el ReadData2 vaya a un Bifurcador en vez de directo al DataMemory.
+\item El bifurcador tiene una salida hacia un multiplexor.
+\item La otra salida se envío a un distruidor donde toma solo el byte menos significativo y lo envía a la otra entrada del multiplexor.
+\item Del multiplexor se envía la salida al DataMemory, se elige con una línea de control llamada ``WriteByte'' si esta en 1 se escribe solo el byte, sino todo el word.
+\item A la unidad de control se le agrego la línea de control ``WriteByte'' enviandola al Registro Pipeline ID/EX y un cable entre el mismo hacia el EX/MEM.
+\item Ordenamos los ítems y los cables entre los mismos para que el DP se vea bien.
+\end{enumerate}
+ 
+En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
+
+\begin{enumerate}
+\item Agregar la instrucción propiamente dicha, con código de operación 44 (utilizamos un código cercano al storeword que no este utilizado en esta arquitectura).
+\item Agregar a la unidad de control que dicha operación utiliza las mismas líneas de control que el storeword agregando línea de control ``WriteByte'' en 1.
+\end{enumerate}
+
+\subsubsection{Hazards de Datos}
+
+El único Hazard que se podria dar es el RAW (Read after Write) pero dado que la instrucción se copio del storeword el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
+
+\newpage
+\subsection{bgezal}
+
+\begin{lstlisting}[title=Instrucción a desarrollar]
+bgezal Rs, Imm
+\end{lstlisting}
+
+Esta instrucción de tipo I compara el valor del registro Rs con cero, y si es mayor o igual salta a la posición (PC + 4 + Imm*4), almacenando el valor de PC +4 en el registro ra.\\
+
+En este caso es mucho mas simple y queda mas prolijo (al tener que hacer un ``and link'') hacerlo modificiando el Data Path que pensando una pseudo-instrucción equivalente.\\
+
+La modificación al \textbf{Data Path} fue:
+
+\begin{enumerate}
+\item Agregar 2 multiplexores entre EX/MEM y MEM/WB para elegir si guardar un valor en un registro o si guardar el PC+4 en el ra
+\item Para ambos multiplexores se agrego en los Registros Pipeline ID/EX y EX/MEM el item JAL, que fue agregado desde la unidad de control, si se utiliza el bgezal estara en 1 y sino sera 0 siguiendo el camino que usaba antes para las demas instrucciones.
+\item El primer multiplexor toma (en caso de que el JAL este activo) el valor del PC+4 que esta almacenado en el Registro Pipeline EX/MEM en RA, para ello tambien se agrego un Bifurcador entre el Registro Pipeline ID/EX y el ADD que calcula el target del branch para almacenarlo. Ese valor se lo pasa al registro pipeline MEM/WB así guarda en el ra dicha dirección.
+\item El segundo multiplexor toma (en caso del que el JAL este activo) una constante con valor 31 (número de registro para el ra) y lo guarda en el registro pipeline MEM/WB para guardar el PC+4 allí.
+\end{enumerate}
+
+En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
+
+\begin{enumerate}
+\item Agregar la instrucción propiamente dicha, con código de operación 5 (utilizamos un código cercano al beq que no este utilizado en esta arquitectura).
+\item Agregar a la unidad de control que dicha operación utiliza las mismas líneas de control que el beq agregando línea de control ``JAL'' en 1, también se cambio el ALUOp para que llame a una nueva operación de control de la ALU (ALUOp = 3).
+\item En el control de la ALU cuando eñ ALUOp es 3 (código que creamos nosotros) la ALU hara la operación 7 (slt) dejando la línea de control ``Zero'' en 1 cuando el Rs sea mayor o igual a cero y en 0 cuando Rs sea menor que cero.
+\end{enumerate}
+
+\subsubsection{Hazards de Control}
+
+El Hazard de control se soluciona con un flush que hace la arquitectura cuando finaliza la etapa de memoria por lo que las instrucciones que empezaron a buscarse, identificarse y ejecutarse se pierden sin modificar ningún registro o la memoria.
+
+\subsubsection{Hazards de Datos}
+
+El único Hazard que se podria dar es el RAW (Read after Write) pero dado que la instrucción se copio del beq el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
+
+\newpage
+
+\section{DataPaths Modificados}
+
+\subsection{Monociclo lbu}
+
+\includegraphics[scale=0.45]{lbu/dp.png}
+
+\subsection{Pipeline sb}
+
+\includegraphics[scale=0.45]{sb/dp.png}
+
+\subsection{Pipeline bgezal}
+
+\includegraphics[scale=0.45]{bgezal/dp.png}
+
+\section{Programas de Prueba}
+
+\subsection{lbu}
+
+\begin{lstlisting}
+li	$t1, -5 #cargo un número de mas de 1 byte (FFFFFFFB)
+sw	$t1, 4($zero) # guardo el número para poder cargarlo
+lbu	$t4, 4($zero) # cargo el primer byte del número (11111011 = FB = 251)
+sw	$t4, 12($zero) # guardo la palabra que tendra solo un byte con el número (FB = 251)
+\end{lstlisting}
+
+\subsection{sb}
+
+\begin{lstlisting}
+li	$t1, -5 #cargo un número de mas de un byte (FFFFFFFB).
+sb	$t1, 4($zero) #guardo solo el byte menos significativo (11111011 = FB = 251).
+\end{lstlisting}
+
+\subsection{bgezal}
+
+\begin{lstlisting}
+li		$t1, 100 #cargo algo mayor o igual a zero
+bgezal	$t1, salto #hago el branch, que debería tomarse y dejar en ra 8
+addi	$t2, $zero, 5 #instrucción en PC = 8, va a hacer flush de esto
+addi	$t3, $zero, 5 #instrucción en PC = 12, idem
+salto:	
+addi	$t2, $zero, 10 #lugar a donde va a saltar PC = 16
+sw		$ra, 4($zero) #guardo ra para ver que valor tomo. (ra = 8)
+\end{lstlisting}
+\newpage
+
+\section{Conclusiones}
+
+\begin{itemize}
+\item Vale la pena modificar el DataPath cuando es uniciclo y la pseudo-instrucción llevaría mas de una instrucción ya que en el uniciclo se ejecuta de una instrucción a la vez y todas tienen el mismo tiempo que es un ciclo de reloj que dura cuanto dure la instrucción mas larga.
+\item En el Pipeline los riesgos de datos se salvaron con Forwarding gracias a que las instrucciones básicas ya tenian implementado dicho mecanismo y que el DrMIPS acepta la unidad de Forwarding.
+\item Editar el JSON del DrMIPS es mas complicado de lo que se pensaba, primero hay que bosquejar lo que se quiere agregar en una hoja a mano para poder después pasarlo al programa y no olvidarse de ningún ítem tanto elementos, cables o atributos. De todas formas ayudo el editor de texto a cometer menos errores.
+\item Ordenar los cables y los elementos del procesador fue mas complicado todavía, si el DrMIPS tuviese una interfaz gráfica seria de gran utilidad para esa parte.
+\end{itemize}
+
+
+% Citas bibliográficas.
+\begin{thebibliography}{99}
+
+\bibitem{DrMIPS} DrMIPS, \url{https://brunonova.github.io/drmips}.
+
+\bibitem{coad} ``Computer organization and design: the hardware-software interface'', John Hennessy, David
+Patterson. Capítulo 5.
+
+
+\bibitem{json} ECMA-404 The JSON Data Interchange Standard, \url{http://www.json.org/}.
+
+\end{thebibliography}
+
+\end{document}
