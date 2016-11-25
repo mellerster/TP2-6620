@@ -168,35 +168,45 @@ sb	Rs, Imm(Rt)
 Esta instrucción también se podría reemplazar con una pseudo-instrucción,
 
 \begin{lstlisting}[title=Pseudoinstrucción Equivalente]
-li	Rtemp, 255
-and	Rs, Rs, Rtemp
-sb	Rs, Imm(Rt)
+lw $1, Imm(Rt)
+li $9, -256
+and $1, $1, $9
+or $1, $1, Rs
+sw	$1, Imm(Rt)
 \end{lstlisting}
 
-pero también se eligió modificar el data path dado que era parecido a lo hecho en el DP uniciclo para el lbu y ademas aporta mas experiencia al manejo del pipeline para la siguiente instrucción.\\
+pero se eligio crear una mezcla de una pseudo-instrucción con una nueva instrucción que si modifica el datapath para no tener que utilizar algún registro auxiliar (temporal) como el \$9 (\$t1).\\
 
+\begin{lstlisting}[title=Pseudoinstrucción Final]
+lw $1, Imm(Rt)
+sbr $1, Rs, $0
+nop
+sw	$1, Imm(Rt)
+\end{lstlisting}
 
-La modificación al \textbf{Data Path} fue:
+La instrucción nueva \textbf{sbr} requirió la modificación al \textbf{Data Path}:
 
 \begin{enumerate}
-\item Del Registro Pipeline EX/MEM se modificó que el ReadData2 vaya a un Bifurcador en vez de directo al DataMemory.
-\item El bifurcador tiene una salida hacia un multiplexor.
-\item La otra salida se envió a un distruidor donde toma solo el byte menos significativo y lo envía a la otra entrada del multiplexor.
-\item Del multiplexor se envía la salida al DataMemory, se elige con una línea de control llamada ``WriteByte'' si esta en 1 se escribe solo el byte, sino todo el word.
-\item A la unidad de control se le agrego la línea de control ``WriteByte'' enviándola al Registro Pipeline ID/EX y un cable entre el mismo hacia el EX/MEM.
+\item Del ForkEXR1 que distribuye el resultado de la ALU se tomo una rama hacia un nuevo distribuidor donde se toman los bits 8 a 31 (los 3 bytes mas significativos).
+\item Se agrego un Fork que obtiene el ReadData2 del EX/MEM y lo envia, además de donde enviaba antes, a un nuevo distribuidor donde se toman los bits 0 a 7 (el byte menos significativo)
+\item Se agrego un Concatenador que toma de esos 2 distribuidores los bytes quedando un word nuevamente.
+\item Se agrego una línea de control llamada WriteByte.
+\item Se agrego un multiplexor que toma o lo que trae la memoria o lo que trae el concatenador y se elige por el WriteByte.
 \item Ordenamos los ítems y los cables entre los mismos para que el DP se vea bien.
 \end{enumerate}
  
 En cuanto al \textbf{set de instrucciones} lo que se hizo fue:
 
 \begin{enumerate}
-\item Agregar la instrucción propiamente dicha, con código de operación 44 (utilizamos un código cercano al storeword que no este utilizado en esta arquitectura).
-\item Agregar a la unidad de control que dicha operación utiliza las mismas líneas de control que el storeword agregando línea de control ``WriteByte'' en 1.
+\item Agregar la instrucción sbr, con código de operación 44.
+\item Agregar la pseudo-instrucción sb con las llamadas a las instrucciones.
+\item Agregar a la unidad de control que la operación sbr utiliza las líneas de control ALUSrc, RegDst, RegWrite, MemToReg y la nueva línea WriteByte.
+\item Se agrego la operación 3 de la ALU que le dice que utilice el OR para ser mas ordenados.
 \end{enumerate}
 
 \subsubsection{Hazards de Datos}
 
-El único Hazard que se podría dar es el RAW (Read after Write) pero dado que la instrucción se copió del storeword el mismo se soluciona con un Forwarding que lo maneja la unidad de forwarding.
+El único Hazard que se podría dar es el RAW (Read after Write) pero se salvo haciendo un nop entre el sbr y el sw, ya que era complicado modificar mas el data path para que utilice el Forward Unit sin cambiar la funcionalidad básica de las otras instrucciones.
 
 \newpage
 \subsection{bgezal}
@@ -245,7 +255,7 @@ El único Hazard que se podría dar es el RAW (Read after Write) pero dado que la 
 
 \subsection{Pipeline sb}
 
-\includegraphics[scale=0.45]{sb/dp.png}
+\includegraphics[scale=0.70]{sb/dp.png}
 
 \subsection{Pipeline bgezal}
 
@@ -265,8 +275,10 @@ sw	$t4, 12($zero) # guardo la palabra que tendra solo un byte con el número (FB 
 \subsection{sb}
 
 \begin{lstlisting}
-li	$t1, -5 #cargo un número de mas de un byte (FFFFFFFB).
-sb	$t1, 4($zero) #guardo solo el byte menos significativo (11111011 = FB = 251).
+li	$t1, -1 #Cargo un word con todos los bits en 1
+sw	$t1, 4($zero) #Lo guardo en la memoria 4($zero) = FFFFFFFF
+li	$t2, 0x31 #Cargo un word pero con solo un byte de datos
+sb	$t2, 4($zero) #Guardo el byte cargado en t2 en la memoria 4($zero) = FFFFFF31 
 \end{lstlisting}
 
 \subsection{bgezal}
@@ -286,7 +298,8 @@ sw		$ra, 4($zero) #guardo ra para ver que valor tomo. (ra = 8)
 
 \begin{itemize}
 \item Vale la pena modificar el DataPath cuando es uniciclo y la pseudo-instrucción llevaría mas de una instrucción ya que en el uniciclo se ejecuta de una instrucción a la vez y todas tienen el mismo tiempo que es un ciclo de reloj que dura cuanto dure la instrucción mas larga.
-\item En el Pipeline los riesgos de datos se salvaron con Forwarding gracias a que las instrucciones básicas ya tenian implementado dicho mecanismo y que el DrMIPS acepta la unidad de Forwarding.
+\item En el Pipeline el riesgo de datos para el bgezal se salvo con Forwarding gracias a que las instrucciones básicas ya tenian implementado dicho mecanismo y que el DrMIPS acepta la unidad de Forwarding.
+\item El sb trajo tanta complejidad que la catedra pidió que se haga con una mezcla de una pseudio-instrucción y una instrucción nueva interna, esto hizo que tengamos que volver a pensar la instrucción, dado que lo que pensamos para la primera entrega no servía y volver a modificar el datapath, también trajo un riesgo de datos que tuvimos que salvar con una instrucción nop al no saber manejar correctamente la unidad de Forwarding teniendo que perder un ciclo del pipeline.
 \item Editar el JSON del DrMIPS es mas complicado de lo que se pensaba, primero hay que bosquejar lo que se quiere agregar en una hoja a mano para poder después pasarlo al programa y no olvidarse de ningún ítem tanto elementos, cables o atributos. De todas formas ayudo el editor de texto a cometer menos errores.
 \item Ordenar los cables y los elementos del procesador fue mas complicado todavía, si el DrMIPS tuviese una interfaz gráfica seria de gran utilidad para esa parte.
 \end{itemize}
