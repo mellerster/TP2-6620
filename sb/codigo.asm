@@ -1,2 +1,4 @@
-li	$t1, -5 #cargo un número de mas de un byte (FFFFFFFB).
-sb	$t1, 4($zero) #guardo solo el byte menos significativo (11111011 = FB = 251).
+li $t1, -1 #Cargo un word con todos los bits en 1
+sw $t1, 4($zero) #Lo guardo en la memoria 4($zero) = FFFFFFFF
+li $t2, 0x31 #Cargo un word pero con solo un byte de datos
+sb $t2, 4($zero) #Guardo el byte cargado en t2 en la memoria 4($zero) = FFFFFF31 
